@@ -8,7 +8,7 @@
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone https://github.com/duckmak14/ai-agent-netbox.git
 cd agent-netbox
 ```
 
