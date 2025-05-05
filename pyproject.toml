@@ -1,0 +1,35 @@
+[project]
+name = "agent-netbox"
+version = "0.1.0"
+description = "AI Agent for Netbox integration"
+authors = [
+    {name = "ducna", email = "ducna@hcd"}
+]
+dependencies = [
+    "langchain",
+    "langchain-azure-ai",
+    "langchain-mcp-adapters",
+    "langgraph",
+    "mcp",
+    "urllib3",
+    "python-dotenv",
+    "numpy",
+    "streamlit"
+]
+requires-python = ">=3.8"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["."]
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3 
