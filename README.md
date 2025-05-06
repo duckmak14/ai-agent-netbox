@@ -9,10 +9,23 @@
 1. Clone the repository:
 ```bash
 git clone https://github.com/duckmak14/ai-agent-netbox.git
-cd agent-netbox
+cd ai-agent-netbox
 ```
 
 2. Run the application using Docker Compose:
+
+```markdown
+**Note:** Starting from Docker Compose version 2.0, use the `docker compose` command. For older versions, use `docker-compose`.
+```
+
+```bash
+docker compose up -d
+```
+
+```markdown
+**Note:** For older versions, use `docker-compose`.
+```
+
 ```bash
 docker-compose up -d
 ```
