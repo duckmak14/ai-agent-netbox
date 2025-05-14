@@ -1,35 +1,22 @@
 [project]
-name = "agent-netbox"
+name = "netbox-mcp"
 version = "0.1.0"
-description = "AI Agent for Netbox integration"
-authors = [
-    {name = "ducna", email = "ducna@hcd"}
-]
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
 dependencies = [
-    "langchain",
-    "langchain-azure-ai",
-    "langchain-mcp-adapters",
-    "langgraph",
-    "mcp",
-    "urllib3",
-    "python-dotenv",
-    "numpy",
-    "streamlit"
+    "httpx>=0.28.1",
+    "langchain>=0.3.23",
+    "langchain-azure-ai>=0.1.2",
+    "langchain-community>=0.3.21",
+    "langchain-mcp-adapters>=0.0.7",
+    "langchain-ollama>=0.3.1",
+    "langchain-openai>=0.3.12",
+    "langgraph>=0.3.25",
+    "mcp[cli]>=1.6.0",
+    "nest-asyncio>=1.6.0",
+    "ollama>=0.4.7",
+    "openai>=1.71.0",
+    "requests>=2.32.3",
+    "streamlit>=1.44.1",
 ]
-requires-python = ">=3.8"
-
-[build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
-
-[tool.setuptools]
-packages = ["."]
-
-[tool.black]
-line-length = 88
-target-version = ['py38']
-include = '\.pyi?$'
-
-[tool.isort]
-profile = "black"
-multi_line_output = 3 

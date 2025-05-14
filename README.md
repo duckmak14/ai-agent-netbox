@@ -1,40 +1,66 @@
-# Agent Netbox
+# Netbox MCP Server
 
-## Prerequisites
-- Docker
-- Docker Compose
+A powerful integration server that combines Netbox's network infrastructure management capabilities with MCP (Multi-Cloud Platform) functionality. 
 
-## Running the Application
+## Installation
+
+### Option 1: Local Installation
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/duckmak14/ai-agent-netbox.git
-cd ai-agent-netbox
+git clone https://github.com/yourusername/netbox-mcp.git
+cd netbox-mcp
 ```
 
-2. Run the application using Docker Compose:
-
-```markdown
-**Note:** Starting from Docker Compose version 2.0, use the `docker compose` command. For older versions, use `docker-compose`.
-```
-
+2. Create and activate a virtual environment:
 ```bash
-docker compose up -d
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
-```markdown
-**Note:** For older versions, use `docker-compose`.
-```
-
+3. Install dependencies:
 ```bash
+pip install -r requirements.txt
+```
+
+4. Configure environment variables:
+Create a `.env` file in the project root with the following variables:
+```
+NETBOX_URL=your_netbox_url
+NETBOX_TOKEN=your_api_token
+```
+5. Start the server:
+```bash
+python server.py
+```
+
+6. Access the application at `http://localhost:8000`
+
+### Option 2: Docker Installation
+
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/netbox-mcp.git
+cd netbox-mcp
+```
+
+2. Configure environment variables:
+Create a `.env` file in the project root with the following variables:
+```
+NETBOX_URL=your_netbox_url
+NETBOX_TOKEN=your_api_token
+```
+
+3. Build and run with Docker Compose:
+```bash
+# Build and start the container in detached mode
 docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop the container
+docker-compose down
 ```
 
-This command will:
-- Build the Docker image with tag `agent-netbox:latest`
-- Start the container in detached mode
-- The application will be accessible at `http://localhost:8501`
-
-## Environment Variables
-The application uses the following environment variables:
-- `STREAMLIT_SERVER_ADDRESS`: Set to `0.0.0.0` to allow external access 
+4. Access the application at `http://localhost:8000`

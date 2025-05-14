@@ -1,9 +1,3 @@
-langchain
-langchain-mcp-adapters
-langchain_openai
-langgraph
+dotenv
 mcp
-urllib3
-python-dotenv
-numpy
-streamlit
+requests

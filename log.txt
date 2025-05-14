@@ -1,0 +1,7 @@
+2025-05-14 17:10:32,878 - mcp.server.lowlevel.server - INFO - Processing request of type ListToolsRequest
+2025-05-14 17:10:32,886 - mcp.server.lowlevel.server - INFO - Processing request of type GetPromptRequest
+2025-05-14 17:10:34,268 - mcp.server.lowlevel.server - INFO - Processing request of type CallToolRequest
+2025-05-14 17:10:34,919 - mcp.server.lowlevel.server - INFO - Processing request of type CallToolRequest
+2025-05-14 17:10:34,920 - root - INFO - Fetching objects from endpoint: dcim/devices with filters: {}
+2025-05-14 17:10:34,920 - root - INFO - GET request to URL in netbox: https://192.168.221.45/api/dcim/devices/
+2025-05-14 17:10:35,773 - mcp.server.lowlevel.server - INFO - Warning: InsecureRequestWarning: Unverified HTTPS request is being made to host '192.168.221.45'. Adding certificate verification is strongly advised. See: https://urllib3.readthedocs.io/en/latest/advanced-usage.html#tls-warnings
