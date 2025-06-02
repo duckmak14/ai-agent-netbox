@@ -1,102 +1,150 @@
-from mcp import ClientSession, StdioServerParameters
+from mcp import ClientSession
 from langchain_mcp_adapters.tools import load_mcp_tools
 from langgraph.prebuilt import create_react_agent
 import asyncio
 import streamlit as st
 import urllib3
 import logging
+from langchain_azure_ai.chat_models import AzureAIChatCompletionsModel
 from mcp.client.sse import sse_client
+from dotenv import load_dotenv
+import httpx
+import json
 import os
-from langchain_openai import ChatOpenAI
-
+from langchain_mcp_adapters.client import MultiServerMCPClient
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+load_dotenv()
+
+llm_model = AzureAIChatCompletionsModel(
+    )
 
 async def get_final_answer(agent_response: str) -> str:
     ai_messages = [message for message in agent_response.get("messages", []) if "AIMessage" in str(type(message))]
     result = ai_messages[-1]
     return result.content
 
-def configure_page():
-    st.title("NetBox Configuration")
-    openai_key = st.text_input("OpenAI API Key", type="password", placeholder="Your OpenAI API Key")
-    mcp_server_url = st.text_input("MCP Server URL", placeholder="http://localhost:8000/sse")
+async def get_custom_fields():
+    try:
+        async with sse_client(url="http://192.168.221.54:8000/sse") as (read, wirte):
+            async with  ClientSession(read, wirte) as session:
+                await session.initialize()
+                result = await session.call_tool("get_custom_fields", {"object_type": "custom-fields", "filters": {}  })
+                return result
+    except Exception as e:
+        print(f"Error calling tool get_custom_fields: {str(e)}")
+        return None
+    
+def build_prompt_custom_feild(custom_feilds):
+    """
+    Prompt mô tả các custom field của Netbox từ danh sách dict.
+    custom_feilds: list các dict custom field.
+    """
+    if not custom_feilds:
+        return "Không có custom field nào trong Netbox."
 
-    if st.button("Save and Continue"):
-        if not mcp_server_url or not openai_key:
-            st.error("All fields are required.")
-        else:
-            st.session_state['OPENAI_API_KEY'] = openai_key
-            st.session_state['MCP_SERVER_URL'] = mcp_server_url
-
-            os.environ['OPENAI_API_KEY'] = openai_key
-            os.environ['MCP_SERVER_URL'] = mcp_server_url
-            st.success("Configuration saved! Redirecting to chat...")
-            st.session_state['page'] = "chat"
+    prompt = "Dưới đây là danh sách các custom field hiện có trong Netbox:\n"
+    for idx, field in enumerate(custom_feilds, 1):
+        name = field.get("name", "Không rõ tên")
+        description = field.get("description", "")
+        object_types = ", ".join(field.get("object_types", []))
+        prompt += f"{idx}. Tên: {name}\n"
+        if object_types:
+            prompt += f"   Áp dụng cho: {object_types}\n"
+        if description:
+            prompt += f"   Mô tả: {description}\n"
+    return prompt
 
 async def chat_page():
-    mcp_server_url = st.session_state['MCP_SERVER_URL']
-    openai_api_key = st.session_state['OPENAI_API_KEY']
-    async with sse_client(url=mcp_server_url) as (read, wirte):
-        async with  ClientSession(read, wirte) as session:
-            await session.initialize()
-            tools = await load_mcp_tools(session)
+    client = MultiServerMCPClient(
+        {
+            "netbox": {
+                "url": "http://192.168.221.54:8000/sse",
+                "transport": "sse",
+            },
+            "checkmk": {
+                "url": "http://192.168.221.54:8002/sse",
+                "transport": "sse",
+            }
+        }
+    )
+    tools = await client.get_tools()
+    
+    # get all custom fields from netbox
+    custom_fields = await get_custom_fields()
+    custom_fields_json = []
+    for item in custom_fields.content:
+        try:
+            # Parse the text content as JSON
+            json_obj = json.loads(item.text)
+            # Select only the required fields
+            filtered = {
+                "id": json_obj["id"],
+                "name": json_obj["name"],
+                "object_types": json_obj["object_types"],
+                "description": json_obj["description"]
+            }
+            custom_fields_json.append(filtered)
+        except json.JSONDecodeError as e:
+            print(f"Error parsing JSON: {e}")
 
-            llm_model = ChatOpenAI(model_name="gpt-4o", openai_api_key=openai_api_key)
-            # Fetch a specific prompt from MCP
-            prompt_name = "netbox_mcp" 
-            fetched_prompt = await session.get_prompt(prompt_name)
-            prompt = fetched_prompt.messages[0].content.text
-            agent = create_react_agent(
-                model=llm_model,
-                tools=tools,
-                prompt=prompt,
-            )
+    prompt_custom_field = build_prompt_custom_feild(custom_fields_json)
+
+    # get netbox_prompt_get_count_objects from MCP
+    netbox_prompt_get_count_objects = await client.get_prompt("netbox", "netbox_prompt_get_count_objects")
+    # Fetch a specific prompt from MCP
+    prompt_netbox = await client.get_prompt("netbox" , "netbox-mcp")
+    prompt_checkmk = await client.get_prompt("checkmk" , "checkmk_prompt")
+
+    # get content of prompt
+    prompt_netbox_str = prompt_netbox[0].content
+    prompt_checkmk_str = prompt_checkmk[0].content
+    prompt_netbox_count_objects = netbox_prompt_get_count_objects[0].content 
+
+    # create agent
+    agent = create_react_agent(
+        model=llm_model,
+        tools=tools,
+        prompt= prompt_custom_field + prompt_netbox_str + prompt_checkmk_str + prompt_netbox_count_objects,
+    )
+    
+    # streamlit
+    st.title("Trợ lý CNTT")
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+    
+    # Hiển thị lại toàn bộ lịch sử chat
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
             
-            # streamlit
-            st.title("Chat with AI Agent")
-            if "messages" not in st.session_state:
-                st.session_state.messages = []
+    if user_input := st.chat_input("Trợ lý Công nghệ thông tin tại MB sẽ giải đáp thắc mắc của bạn! Hãy gõ câu hỏi vào đây."):
+        # Add user input to chat history
+        with st.chat_message("user"):
+            st.markdown(user_input)
+        st.session_state.messages.append({"role": "user", "content": user_input})
+
+        try:
+            logging.info(f"📝 User input: {user_input}")
+            user_question = [user_input] + st.session_state.messages[-8:]
+            # ✅ Use agent_executor to process user input
+            response = await agent.ainvoke({
+                "messages": user_question,
+            })
+
+            logging.info(f"🤖 Agent response: {response}")
             
-            # Hiển thị lại toàn bộ lịch sử chat
-            for message in st.session_state.messages:
-                with st.chat_message(message["role"]):
-                    st.markdown(message["content"])
-                    
-            if user_input := st.chat_input("Ask AI Agent a question"):
-                # Add user input to chat history
-                with st.chat_message("user"):
-                    st.markdown(user_input)
-                st.session_state.messages.append({"role": "user", "content": user_input})
+            # Extract and display the final answer
+            final_answer = await get_final_answer(response)
+            with st.chat_message("assistant"):
+                st.markdown(final_answer)
+            # Update chat history
+            st.session_state.messages.append({"role": "assistant", "content": final_answer})
 
-                try:
-                    logging.info(f"📝 User input: {user_input}")
-
-                    # ✅ Use agent_executor to process user input
-                    response = await agent.ainvoke({
-                        "messages": user_input,
-                    })
-
-                    logging.info(f"🤖 Agent response: {response}")
-                    
-                    # Extract and display the final answer
-                    final_answer = await get_final_answer(response)
-
-                    with st.chat_message("assistant"):
-                        st.markdown(final_answer)
-                    # Update chat history
-                    st.session_state.messages.append({"role": "assistant", "content": final_answer})
-
-                except Exception as e:
-                    st.error(f"An error occurred: {str(e)}")
+        except Exception as e:
+            st.error(f"An error occurred: {str(e)}")
 
 if __name__ == "__main__":
-    if 'page' not in st.session_state:
-        st.session_state['page'] = "configure"
-
-    if st.session_state['page'] == "configure":
-        configure_page()
-    elif st.session_state['page'] == "chat":
-        asyncio.run(chat_page())
+    asyncio.run(chat_page())
